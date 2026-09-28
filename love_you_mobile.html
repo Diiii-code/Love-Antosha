@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>Love You ❤️</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden}
+body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#start{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:#000;color:#fff;font:500 17px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+#start button{border:1px solid #555;border-radius:999px;background:#080808;color:#fff;padding:15px 23px;font-size:17px;box-shadow:0 0 25px rgba(30,144,255,.18)}
+#start button:active{transform:scale(.97)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="start"><button>Нажми, чтобы запустить ❤️</button></div>
+<script>
+const c=document.getElementById("c"),ctx=c.getContext("2d");
+const WORDS=["love you","Love You","LOVE YOU"];
+const COLORS=[[70,130,180],[30,144,255],[0,191,255],[100,149,237],[65,105,225]];
+let w=0,h=0,dpr=1,scale=1,particles=[],frame=0,fillStart=0,running=false;
+
+function resize(){
+ dpr=Math.min(devicePixelRatio||1,2);
+ w=innerWidth; h=innerHeight;
+ c.width=Math.floor(w*dpr); c.height=Math.floor(h*dpr);
+ c.style.width=w+"px"; c.style.height=h+"px";
+ ctx.setTransform(dpr,0,0,dpr,0,0);
+ scale=Math.min(w/2000,h/1200)*20;
+}
+addEventListener("resize",resize,{passive:true}); resize();
+
+function rnd(a,b){return a+Math.random()*(b-a)}
+function heart(t){
+ return [16*Math.sin(t)**3,-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))];
+}
+function pos(x,y){return [x*scale+w/2,y*scale+h/2]}
+function distance(a,b,c,d){return Math.hypot(a-c,b-d)}
+
+function build(){
+ particles=[];
+ let placed=[];
+ for(let i=0;i<160;i++){
+  let [bx,by]=heart(i/160*Math.PI*2),[x,y]=pos(bx,by);
+  if(placed.some(p=>distance(x,y,p[0],p[1])<30))continue;
+  placed.push([x,y]);
+  particles.push({x,y,order:i,kind:"outline",word:WORDS[(Math.random()*3)|0],
+   color:COLORS[(Math.random()*COLORS.length)|0],alpha:0,flick:rnd(0,Math.PI*2),
+   delay:i*1.6,size:rnd(.85,1.15)});
+ }
+ placed=[];
+ let count=0,attempts=0;
+ while(count<130&&attempts++<10400){
+  let t=rnd(0,Math.PI*2),r=rnd(0,.86),[bx,by]=heart(t),[x,y]=pos(bx*r,by*r);
+  if(placed.some(p=>distance(x,y,p[0],p[1])<46))continue;
+  placed.push([x,y]);
+  particles.push({x,y,order:(Math.random()*321)|0,kind:"fill",word:WORDS[(Math.random()*3)|0],
+   color:COLORS[(Math.random()*COLORS.length)|0],alpha:0,flick:rnd(0,Math.PI*2),
+   delay:0,size:rnd(.85,1.15)});
+  count++;
+ }
+ fillStart=160*1.6+30;
+ particles.filter(p=>p.kind==="fill").forEach(p=>p.delay=fillStart+p.order);
+}
+
+function drawParticle(p){
+ if(p.alpha<=0)return;
+ const flick=p.alpha>=255 ? .75+.25*Math.sin(frame*.04+p.flick):1;
+ const alpha=p.alpha*flick;
+ const base=p.kind==="outline"?20:17;
+ const fs=base*p.size;
+ const [r,g,b]=p.color;
+ ctx.save();
+ ctx.font=`700 ${fs}px Arial,sans-serif`;
+ ctx.textAlign="center";ctx.textBaseline="middle";
+ ctx.fillStyle=`rgba(${r},${g},${b},${alpha/255})`;
+ ctx.shadowBlur=Math.max(5,fs*.65);
+ ctx.shadowColor=`rgba(${r},${g},${b},${alpha/220})`;
+ ctx.fillText(p.word,p.x,p.y);
+ ctx.restore();
+}
+
+function loop(){
+ if(!running)return;
+ frame++;
+ ctx.clearRect(0,0,w,h);
+ for(const p of particles){
+  if(frame>p.delay&&p.alpha<255)p.alpha=Math.min(255,p.alpha+14+((Math.random()*5)|0));
+  drawParticle(p);
+ }
+ const centerStart=fillStart+200;
+ if(frame>centerStart){
+  const progress=Math.min(1,(frame-centerStart)/60);
+  const alpha=255*(1-Math.exp(-progress*8));
+  const pulse=1+.025*Math.sin(frame*.05);
+  ctx.save();
+  ctx.translate(w/2,h/2);ctx.scale(pulse,pulse);
+  ctx.font="700 54px Georgia,serif";
+  ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.shadowBlur=18;ctx.shadowColor=`rgba(255,250,245,${alpha/900})`;
+  ctx.fillStyle=`rgba(255,250,245,${alpha/255})`;
+  ctx.fillText(" Love You ",0,0);
+  ctx.restore();
+ }
+ requestAnimationFrame(loop);
+}
+
+document.querySelector("#start button").addEventListener("click",()=>{
+ document.getElementById("start").style.display="none";
+ build(); frame=0; running=true; loop();
+});
+</script>
+</body>
+</html>
